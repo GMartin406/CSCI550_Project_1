@@ -75,5 +75,36 @@ summary(glm.fits1)
 
 ## Models
 
+##LDA
+```{r lda}
+library(MASS)
+library(caret)
+
+
+#Randomly shuffle the data
+Customer_telecom<-Customer_telecom[sample(nrow(Customer_telecom)),]
+
+#Create 10 equally size folds
+folds <- cut(seq(1,nrow(Customer_telecom)),breaks=10,labels=FALSE)
+
+MAE=c()
+mae=c()
+
+#K-fold Cross Validation
+for (i in 1:10){
+  testIndexes <- which(folds==i,arr.ind=TRUE)
+  test_data <- Customer_telecom[testIndexes, ]
+  train_data <- Customer_telecom[-testIndexes, ]
+  m_lda <- lda(churn1 ~ number.vmail.messages + total.intl.calls + customer.service.calls, data = train_data)
+  m_pred <- predict(m_lda, test_data)
+  conf <- table(list(predicted=m_pred$class, observed=test_data$churn1))
+  caret::confusionMatrix(conf)
+  mae <- c(mae, mean(abs(as.integer(m_pred$class == 1) - as.integer(test_data$churn1 == 1))))
+}
+
+MAE=c(MAE, mean(mae))
+MAE
+
+```
 
 
