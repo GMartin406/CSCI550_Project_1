@@ -88,7 +88,7 @@ Customer_telecom<-Customer_telecom[sample(nrow(Customer_telecom)),]
 folds <- cut(seq(1,nrow(Customer_telecom)),breaks=10,labels=FALSE)
 
 totalMisclassificationRate=c()
-misclassificationRate=c()
+runningTotal=c()
 
 #K-fold Cross Validation
 for (i in 1:10){
@@ -129,7 +129,7 @@ Customer_telecom<-Customer_telecom[sample(nrow(Customer_telecom)),]
 folds <- cut(seq(1,nrow(Customer_telecom)),breaks=10,labels=FALSE)
 
 totalMisclassificationRate <- c()
-misclassificationRate <- c()
+runningTotal <- c()
 
 for (i in 1:10){
   testIndexes <- which(folds==i,arr.ind=TRUE)
