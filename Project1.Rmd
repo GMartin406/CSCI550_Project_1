@@ -32,27 +32,27 @@ Customer_telecom <- read.csv("Customer_telecom.csv")
 ```{r eda}
 
 num_c <- Customer_telecom %>%
-  select(account.length, number.vmail.messages, total.day.minutes, total.day.calls, total.day.charge, total.eve.minutes, total.eve.calls, total.eve.charge, total.night.minutes, total.night.calls, total.night.charge, total.intl.minutes, total.intl.calls, total.intl.charge, customer.service.calls)
+  dplyr::select(account.length, number.vmail.messages, total.day.minutes, total.day.calls, total.day.charge, total.eve.minutes, total.eve.calls, total.eve.charge, total.night.minutes, total.night.calls, total.night.charge, total.intl.minutes, total.intl.calls, total.intl.charge, customer.service.calls)
 
 cor(num_c)
 summary(Customer_telecom)
 
 num_c <- num_c %>%
-  select(account.length, number.vmail.messages, total.day.minutes, total.day.calls, total.eve.minutes, total.eve.calls, total.night.minutes, total.night.calls, total.intl.minutes, total.intl.calls, customer.service.calls)
+  dplyr::select(account.length, number.vmail.messages, total.day.minutes, total.day.calls, total.eve.minutes, total.eve.calls, total.night.minutes, total.night.calls, total.intl.minutes, total.intl.calls, customer.service.calls)
 
 minutes_c <- num_c %>%
-  select(account.length, number.vmail.messages, total.day.minutes, total.eve.minutes, total.night.minutes, total.intl.minutes, customer.service.calls)
+  dplyr::select(account.length, number.vmail.messages, total.day.minutes, total.eve.minutes, total.night.minutes, total.intl.minutes, customer.service.calls)
 
 pairs(minutes_c)
 
 calls_c <-  Customer_telecom %>%
-  select(account.length, number.vmail.messages, total.day.calls, total.eve.calls, total.night.calls, total.intl.calls, customer.service.calls)
+  dplyr::select(account.length, number.vmail.messages, total.day.calls, total.eve.calls, total.night.calls, total.intl.calls, customer.service.calls)
 pairs(calls_c)
 
 sums_c <- Customer_telecom %>%
   mutate(total_minutes = sum(total.day.minutes, total.eve.minutes, total.night.minutes, total.intl.minutes)) %>%
   mutate(total_calls = sum(total.day.calls, total.eve.calls, total.night.calls, total.intl.calls)) %>%
-  select(account.length, number.vmail.messages, total_minutes, total_calls,  customer.service.calls)
+  dplyr::select(account.length, number.vmail.messages, total_minutes, total_calls,  customer.service.calls)
                              
 pairs(sums_c)
 
@@ -71,7 +71,7 @@ glm.fits1 <- glm(
 )
 summary(glm.fits1)
 ```
-
+Based on the result from our preprocess, the output from cor() shows all correlations between two variables, the two variables with high correlation will not be in the same model. The LRM glm.fits1 including all predictors provides a summary of z-Score and p-value. We will start fitting models with the predictors number.vmail.messages(p=4.89e-08), total.intl.calls(p=0.00077), and customer.service.calls(p=< 2e-16).
 
 ## Models
 
@@ -204,3 +204,49 @@ totalMisclassificationRate
 
 
 ```
+#LDA 2
+
+
+```{r lda}
+library(MASS)
+library(caret)
+
+
+#Randomly shuffle the data
+Customer_telecom<-Customer_telecom[sample(nrow(Customer_telecom)),]
+
+#Create 10 equally size folds
+folds <- cut(seq(1,nrow(Customer_telecom)),breaks=10,labels=FALSE)
+
+totalMisclassificationRate=c()
+runningTotal=c()
+
+#K-fold Cross Validation
+for (i in 1:10){
+  testIndexes <- which(folds==i,arr.ind=TRUE)
+  test_data <- Customer_telecom[testIndexes, ]
+  train_data <- Customer_telecom[-testIndexes, ]
+  m_lda2 <- lda(churn1 ~ number.vmail.messages + total.intl.calls + customer.service.calls + total.day.calls, data = train_data)
+  m_pred <- predict(m_lda2, test_data)
+  conf <- table(list(predicted=m_pred$class, observed=test_data$churn1))
+  confusionMatrix(conf)
+  print(conf)
+  print(conf[1,1])
+  print(conf[1,2])
+  print(conf[2,1])
+  print(conf[2,2])
+  print(sum(conf))
+  totalPreds = sum(conf)
+  incorrectPreds <- conf[1,2] + conf[2,1]
+  print(incorrectPreds)
+  misclassificationRate <- incorrectPreds / totalPreds
+  print(misclassificationRate)
+  runningTotal <- c(runningTotal, misclassificationRate)
+}
+
+totalMisclassificationRate=c(totalMisclassificationRate, mean(runningTotal))
+print("Average Misclassification Rate")
+totalMisclassificationRate
+```
+
+By adding one more predictor total.day.calls(the potential predictor with the fourth smallest p-value from LRM), the average misclassification rate tend to increase slightly, which may be caused by overfitting. --So we stop by including 3 predictors in our model. 
