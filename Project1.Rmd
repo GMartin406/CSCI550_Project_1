@@ -79,6 +79,7 @@ Based on the result from our preprocess, the output from cor() shows all correla
 ```{r lda}
 library(MASS)
 library(caret)
+library(pROC)
 
 
 #Randomly shuffle the data
@@ -89,6 +90,9 @@ folds <- cut(seq(1,nrow(Customer_telecom)),breaks=10,labels=FALSE)
 
 totalMisclassificationRate=c()
 runningTotal=c()
+
+averageAUC = c()
+auc = c()
 
 #K-fold Cross Validation
 for (i in 1:10){
@@ -105,11 +109,20 @@ for (i in 1:10){
   misclassificationRate <- incorrectPreds / totalPreds
   print(misclassificationRate)
   runningTotal <- c(runningTotal, misclassificationRate)
+  
+  roc_score = roc(response = test_data$churn1, predictor = m_pred$posterior[,"1"])
+  auc <- c(auc,roc_score$auc)
+  print(roc_score$auc)
+  plot(roc_score, main="ROC Curve - LDA: Iteration ")
 }
 
 totalMisclassificationRate=c(totalMisclassificationRate, mean(runningTotal))
 print("Average Misclassification Rate")
 totalMisclassificationRate
+
+print("Average AUC")
+averageAUC=c(averageAUC, mean(auc))
+print(averageAUC)
 ```
 
 ##QDA
@@ -125,6 +138,9 @@ folds <- cut(seq(1,nrow(Customer_telecom)),breaks=10,labels=FALSE)
 totalMisclassificationRate <- c()
 runningTotal <- c()
 
+averageAUC = c()
+auc = c()
+
 for (i in 1:10){
   testIndexes <- which(folds==i,arr.ind=TRUE)
   test_data <- Customer_telecom[testIndexes, ]
@@ -139,12 +155,20 @@ for (i in 1:10){
   misclassificationRate <- incorrectPreds / totalPreds
   print(misclassificationRate)
   runningTotal <- c(runningTotal, misclassificationRate)
+  
+  roc_score = roc(response = test_data$churn1, predictor = m_pred$posterior[,"1"])
+  auc <- c(auc,roc_score$auc)
+  print(roc_score$auc)
+  plot(roc_score, main="ROC Curve - LDA: Iteration ")
 }
 
 totalMisclassificationRate=c(totalMisclassificationRate, mean(runningTotal))
 print("Average Misclassification Rate")
 totalMisclassificationRate
 
+print("Average AUC")
+averageAUC=c(averageAUC, mean(auc))
+print(averageAUC)
 ```
 
 
@@ -163,6 +187,9 @@ folds <- cut(seq(1,nrow(Customer_telecom)),breaks=10,labels=FALSE)
 totalMisclassificationRate <- c()
 runningTotal <- c()
 
+averageAUC = c()
+auc = c()
+
 for (i in 1:10){
   testIndexes <- which(folds==i,arr.ind=TRUE)
   test_data <- Customer_telecom[testIndexes, ]
@@ -178,13 +205,20 @@ for (i in 1:10){
   misclassificationRate <- incorrectPreds / totalPreds
   print(misclassificationRate)
   runningTotal <- c(runningTotal, misclassificationRate)
+  
+  #roc_score = roc(response = test_data$churn1, predictor = m_pred["1"])
+  #auc <- c(auc,roc_score$auc)
+  #print(roc_score$auc)
+  #plot(roc_score, main="ROC Curve - LDA: Iteration ")
 }
 
 totalMisclassificationRate=c(totalMisclassificationRate, mean(runningTotal))
 print("Average Misclassification Rate")
 totalMisclassificationRate
 
-
+#print("Average AUC")
+#averageAUC=c(averageAUC, mean(auc))
+#print(averageAUC)
 ```
 
 ##LDA Experiments
@@ -205,6 +239,9 @@ folds <- cut(seq(1,nrow(Customer_telecom)),breaks=10,labels=FALSE)
 totalMisclassificationRate=c()
 runningTotal=c()
 
+averageAUC = c()
+auc = c()
+
 #K-fold Cross Validation
 for (i in 1:10){
   testIndexes <- which(folds==i,arr.ind=TRUE)
@@ -220,11 +257,20 @@ for (i in 1:10){
   misclassificationRate <- incorrectPreds / totalPreds
   print(misclassificationRate)
   runningTotal <- c(runningTotal, misclassificationRate)
+  
+  roc_score = roc(response = test_data$churn1, predictor = m_pred$posterior[,"1"])
+  auc <- c(auc,roc_score$auc)
+  print(roc_score$auc)
+  plot(roc_score, main="ROC Curve - LDA: Iteration ")
 }
 
 totalMisclassificationRate=c(totalMisclassificationRate, mean(runningTotal))
 print("Average Misclassification Rate")
 totalMisclassificationRate
+
+print("Average AUC")
+averageAUC=c(averageAUC, mean(auc))
+print(averageAUC)
 ```
 
 By adding one more predictor total.day.calls(the potential predictor with the fourth smallest p-value from LRM), the average misclassification rate tend to increase slightly, which may be caused by overfitting. --So we stop by including 3 predictors in our model. 
@@ -244,6 +290,9 @@ folds <- cut(seq(1,nrow(Customer_telecom)),breaks=10,labels=FALSE)
 totalMisclassificationRate=c()
 runningTotal=c()
 
+averageAUC = c()
+auc = c()
+
 #K-fold Cross Validation
 for (i in 1:10){
   testIndexes <- which(folds==i,arr.ind=TRUE)
@@ -259,11 +308,20 @@ for (i in 1:10){
   misclassificationRate <- incorrectPreds / totalPreds
   print(misclassificationRate)
   runningTotal <- c(runningTotal, misclassificationRate)
+  
+  roc_score = roc(response = test_data$churn1, predictor = m_pred$posterior[,"1"])
+  auc <- c(auc,roc_score$auc)
+  print(roc_score$auc)
+  plot(roc_score, main="ROC Curve - LDA: Iteration ")
 }
 
 totalMisclassificationRate=c(totalMisclassificationRate, mean(runningTotal))
 print("Average Misclassification Rate")
 totalMisclassificationRate
+
+print("Average AUC")
+averageAUC=c(averageAUC, mean(auc))
+print(averageAUC)
 ```
 
 Using all predictors except those that would not be meaningful (such as phone number), we get an average misclassification rate that is higher than our selected predictors, this is likely an indicator that the model is capturing unimportant observations.
@@ -283,6 +341,9 @@ folds <- cut(seq(1,nrow(Customer_telecom)),breaks=10,labels=FALSE)
 totalMisclassificationRate=c()
 runningTotal=c()
 
+averageAUC = c()
+auc = c()
+
 #K-fold Cross Validation
 for (i in 1:10){
   testIndexes <- which(folds==i,arr.ind=TRUE)
@@ -298,11 +359,20 @@ for (i in 1:10){
   misclassificationRate <- incorrectPreds / totalPreds
   print(misclassificationRate)
   runningTotal <- c(runningTotal, misclassificationRate)
+  
+  roc_score = roc(response = test_data$churn1, predictor = m_pred$posterior[,"1"])
+  auc <- c(auc,roc_score$auc)
+  print(roc_score$auc)
+  plot(roc_score, main="ROC Curve - LDA: Iteration ")
 }
 
 totalMisclassificationRate=c(totalMisclassificationRate, mean(runningTotal))
 print("Average Misclassification Rate")
 totalMisclassificationRate
+
+print("Average AUC")
+averageAUC=c(averageAUC, mean(auc))
+print(averageAUC)
 ```
 
 Using the top predictors associated with call metrics, we get a very similar rate as with the top three predictors. This likely means that the significance of the additional predictors is already captured in the top three predictors.
