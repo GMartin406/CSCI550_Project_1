@@ -1,6 +1,6 @@
 ---
 title: "CSCI 550 Project 1"
-author: "Heather Koyuk, Muzhou Chen, Greg Martin"
+author: "Heather Koyuk, Muzhou Chen$, Greg Martin"
 date: "9/27/2022"
 output: pdf_document
 urlcolor: blue
