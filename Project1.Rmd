@@ -100,14 +100,8 @@ for (i in 1:10){
   conf <- table(list(predicted=m_pred$class, observed=test_data$churn1))
   confusionMatrix(conf)
   print(conf)
-  print(conf[1,1])
-  print(conf[1,2])
-  print(conf[2,1])
-  print(conf[2,2])
-  print(sum(conf))
   totalPreds = sum(conf)
   incorrectPreds <- conf[1,2] + conf[2,1]
-  print(incorrectPreds)
   misclassificationRate <- incorrectPreds / totalPreds
   print(misclassificationRate)
   runningTotal <- c(runningTotal, misclassificationRate)
@@ -140,14 +134,8 @@ for (i in 1:10){
   conf <- table(list(predicted=m_pred$class, observed=test_data$churn1))
   confusionMatrix(conf)
   print(conf)
-  print(conf[1,1])
-  print(conf[1,2])
-  print(conf[2,1])
-  print(conf[2,2])
-  print(sum(conf))
   totalPreds = sum(conf)
   incorrectPreds <- conf[1,2] + conf[2,1]
-  print(incorrectPreds)
   misclassificationRate <- incorrectPreds / totalPreds
   print(misclassificationRate)
   runningTotal <- c(runningTotal, misclassificationRate)
@@ -185,14 +173,8 @@ for (i in 1:10){
   conf <- table(list(predicted=m_pred, observed=test_data$churn1))
   confusionMatrix(conf)
   print(conf)
-  print(conf[1,1])
-  print(conf[1,2])
-  print(conf[2,1])
-  print(conf[2,2])
-  print(sum(conf))
   totalPreds = sum(conf)
   incorrectPreds <- conf[1,2] + conf[2,1]
-  print(incorrectPreds)
   misclassificationRate <- incorrectPreds / totalPreds
   print(misclassificationRate)
   runningTotal <- c(runningTotal, misclassificationRate)
@@ -204,8 +186,10 @@ totalMisclassificationRate
 
 
 ```
-#LDA 2
 
+##LDA Experiments
+
+##LDA with next most significant predictor
 
 ```{r lda}
 library(MASS)
@@ -231,14 +215,8 @@ for (i in 1:10){
   conf <- table(list(predicted=m_pred$class, observed=test_data$churn1))
   confusionMatrix(conf)
   print(conf)
-  print(conf[1,1])
-  print(conf[1,2])
-  print(conf[2,1])
-  print(conf[2,2])
-  print(sum(conf))
   totalPreds = sum(conf)
   incorrectPreds <- conf[1,2] + conf[2,1]
-  print(incorrectPreds)
   misclassificationRate <- incorrectPreds / totalPreds
   print(misclassificationRate)
   runningTotal <- c(runningTotal, misclassificationRate)
@@ -250,3 +228,81 @@ totalMisclassificationRate
 ```
 
 By adding one more predictor total.day.calls(the potential predictor with the fourth smallest p-value from LRM), the average misclassification rate tend to increase slightly, which may be caused by overfitting. --So we stop by including 3 predictors in our model. 
+
+##LDA All potentially relevant predictors
+```{r lda}
+library(MASS)
+library(caret)
+
+
+#Randomly shuffle the data
+Customer_telecom<-Customer_telecom[sample(nrow(Customer_telecom)),]
+
+#Create 10 equally size folds
+folds <- cut(seq(1,nrow(Customer_telecom)),breaks=10,labels=FALSE)
+
+totalMisclassificationRate=c()
+runningTotal=c()
+
+#K-fold Cross Validation
+for (i in 1:10){
+  testIndexes <- which(folds==i,arr.ind=TRUE)
+  test_data <- Customer_telecom[testIndexes, ]
+  train_data <- Customer_telecom[-testIndexes, ]
+  m_lda2 <- lda(churn1 ~ state + account.length + international.plan + voice.mail.plan + number.vmail.messages + total.day.minutes + total.eve.minutes + total.night.minutes + total.intl.minutes + customer.service.calls, data = train_data)
+  m_pred <- predict(m_lda2, test_data)
+  conf <- table(list(predicted=m_pred$class, observed=test_data$churn1))
+  confusionMatrix(conf)
+  print(conf)
+  totalPreds = sum(conf)
+  incorrectPreds <- conf[1,2] + conf[2,1]
+  misclassificationRate <- incorrectPreds / totalPreds
+  print(misclassificationRate)
+  runningTotal <- c(runningTotal, misclassificationRate)
+}
+
+totalMisclassificationRate=c(totalMisclassificationRate, mean(runningTotal))
+print("Average Misclassification Rate")
+totalMisclassificationRate
+```
+
+Using all predictors except those that would not be meaningful (such as phone number), we get an average misclassification rate that is higher than our selected predictors, this is likely an indicator that the model is capturing unimportant observations.
+
+##LDA All call metrics
+```{r lda}
+library(MASS)
+library(caret)
+
+
+#Randomly shuffle the data
+Customer_telecom<-Customer_telecom[sample(nrow(Customer_telecom)),]
+
+#Create 10 equally size folds
+folds <- cut(seq(1,nrow(Customer_telecom)),breaks=10,labels=FALSE)
+
+totalMisclassificationRate=c()
+runningTotal=c()
+
+#K-fold Cross Validation
+for (i in 1:10){
+  testIndexes <- which(folds==i,arr.ind=TRUE)
+  test_data <- Customer_telecom[testIndexes, ]
+  train_data <- Customer_telecom[-testIndexes, ]
+  m_lda2 <- lda(churn1 ~ number.vmail.messages + total.intl.calls + customer.service.calls + total.day.calls + total.night.calls, data = train_data)
+  m_pred <- predict(m_lda2, test_data)
+  conf <- table(list(predicted=m_pred$class, observed=test_data$churn1))
+  confusionMatrix(conf)
+  print(conf)
+  totalPreds = sum(conf)
+  incorrectPreds <- conf[1,2] + conf[2,1]
+  misclassificationRate <- incorrectPreds / totalPreds
+  print(misclassificationRate)
+  runningTotal <- c(runningTotal, misclassificationRate)
+}
+
+totalMisclassificationRate=c(totalMisclassificationRate, mean(runningTotal))
+print("Average Misclassification Rate")
+totalMisclassificationRate
+```
+
+Using the top predictors associated with call metrics, we get a very similar rate as with the top three predictors. This likely means that the significance of the additional predictors is already captured in the top three predictors.
