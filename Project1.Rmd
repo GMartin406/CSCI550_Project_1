@@ -1,6 +1,6 @@
 ---
 title: "CSCI 550 Project 1"
-author: "Heather Koyuk, Muzhou Chen$, Greg Martin"
+author: "Heather Koyuk, Muzhou Chen, Greg Martin"
 date: "9/27/2022"
 output: pdf_document
 urlcolor: blue
@@ -24,8 +24,13 @@ Customer_telecom <- read.csv("Customer_telecom.csv")
                              
 ```
 
-## TODO: Executive Summary
+## Executive Summary
 
+The first section ##EDA starts at analyzing the correlations of all predictors. As a result, the correlation between total.day.minutes and total.day.charge, total.eve.minutes and total.eve.charge, total.night.minutes and total.night.charge, total.intl.minutes and total.intl.charge are high. This will be used in the future model selection to avoid multi-collinearity. The visualization is shown as matrix of scatter plots from pairs(). Since the output from summary shows that the data contains 3333 observations, the outliers tend to not a problem. By fitting in the logistic regression, we figured three potential predictors, number.vmail.messages, total.intl.calls, and customer.service.calls. 
+
+In the second second ##LDA, we performed linear discriminant analysis. By using 10-fold and calculate the average misclssification rate, we have 0.1428189 change to misclassify, with a average AUC of 0.6382374. The process printed out every 2*2 ROC curve and iteration. The next section ##QDA applys quadratic discriminant analysis provides average misclassification rate 0.1371168 and average AUC 0.6712765. The third section ##Naive Bayes makes the test with assuming features are independent in each class, which provides average misclassification rate 0.1352979. As a result, our model performs better in Naive Bayes. Every section shows a plot of ROC Curve-LDA: Iteration plot for each 10 fold iteration. Furthermore, for the next section, we tested ##LDA with All potentially relevant predictors. The result shows average misclassification rate is 0.1449075, which is higher than our model with just 3 predictors. In our last section, we tested LDA with the predictors with the lost 5 p-value(fro fitting in logistic regression), and the average misclassification rate is 0.1418973, the average AUC is 0.639292. For our recommendations, our first model with 3 predictors performs better, with the lowest average misclassification rate of 0.1352979 from Naive Bayes. 
+
+Since we are using a greedy method forward selection, the potiential future work can continue trying the combination of predictors to get the global optimal model for prediction. 
 
 ## EDA
 
