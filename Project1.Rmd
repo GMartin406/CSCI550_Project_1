@@ -2,7 +2,10 @@
 title: "CSCI 550 Project 1"
 author: "Heather Koyuk, Muzhou Chen, Greg Martin"
 date: "9/27/2022"
-output: pdf_document
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
 urlcolor: blue
 ---
 
@@ -10,135 +13,220 @@ urlcolor: blue
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## Load packages
-
-```{r load-packages, message=FALSE}
+```{r load-packages, message=FALSE, include=FALSE}
 library(tidyverse)
 library(knitr)
 library(lubridate)
 library(psych)
+library(MASS)
+library(caret)
+library(pROC)
+library(e1071)
+
 ```
 
-```{r load-data, message=FALSE}
+```{r load-data, message=FALSE, include=FALSE}
 Customer_telecom <- read.csv("Customer_telecom.csv")
                              
 ```
 
 ## Executive Summary
 
-The first section ##EDA starts at analyzing the correlations of all predictors. As a result, the correlation between total.day.minutes and total.day.charge, total.eve.minutes and total.eve.charge, total.night.minutes and total.night.charge, total.intl.minutes and total.intl.charge are high. This will be used in the future model selection to avoid multi-collinearity. The visualization is shown as matrix of scatter plots from pairs(). Since the output from summary shows that the data contains 3333 observations, the outliers tend to not a problem. By fitting in the logistic regression, we figured three potential predictors, number.vmail.messages, total.intl.calls, and customer.service.calls. 
+The first section [EDA](#eda) starts at analyzing the correlations of all predictors. As a result, the correlation between total.day.minutes and total.day.charge, total.eve.minutes and total.eve.charge, total.night.minutes and total.night.charge, total.intl.minutes and total.intl.charge are high. This information will be used in the future model selection to avoid multicollinearity. The visualization is shown as matrix of scatter plots from pairs(). Since the output from summary shows that the data contains 3333 observations, outliers tend to not be a problem. Based on our preliminary work we decided to use three potential predictors: number.vmail.messages, total.intl.calls, and customer.service.calls for fitting in the logistic regression.
 
-In the second second ##LDA, we performed linear discriminant analysis. By using 10-fold and calculate the average misclssification rate, we have 0.1428189 change to misclassify, with a average AUC of 0.6382374. The process printed out every 2*2 ROC curve and iteration. The next section ##QDA applys quadratic discriminant analysis provides average misclassification rate 0.1371168 and average AUC 0.6712765. The third section ##Naive Bayes makes the test with assuming features are independent in each class, which provides average misclassification rate 0.1352979. As a result, our model performs better in Naive Bayes. Every section shows a plot of ROC Curve-LDA: Iteration plot for each 10 fold iteration. Furthermore, for the next section, we tested ##LDA with All potentially relevant predictors. The result shows average misclassification rate is 0.1449075, which is higher than our model with just 3 predictors. In our last section, we tested LDA with the predictors with the lost 5 p-value(fro fitting in logistic regression), and the average misclassification rate is 0.1418973, the average AUC is 0.639292. For our recommendations, our first model with 3 predictors performs better, with the lowest average misclassification rate of 0.1352979 from Naive Bayes. 
+In the second section [LDA](#lda1), we performed linear discriminant analysis. By using 10-fold cross validation we have a misclassification rate of 0.1428189 with a average AUC of 0.6382374. The process prints out every 2*2 ROC curve and iteration. The next section [QDA](#qda) applies quadratic discriminant analysis, providing an average misclassification rate of 0.1371168 and average AUC 0.6712765. The third section [Naive Bayes](#nbayes) makes the test with assuming features are independent in each class, which provides average misclassification rate 0.1352979. Every section shows a plot of ROC Curve-LDA: Iteration plot for each 10 fold iteration. 
 
-Since we are using a greedy method forward selection, the potiential future work can continue trying the combination of predictors to get the global optimal model for prediction. 
+Finally, we retest LDA with the four most significant predictors ([LDA with next most significant predictor](#lda2)), all potentially relevant predictors ([LDA All potentially relevant predictors](#lda3)), and with the last 5 p-values ([LDA All call metrics](#lda4)) (for fitting in logistic regression). Our first model with 3 predictors performs the best of the various LDA experiments, while the overall lowest average misclassification rate of 0.1352979 occurs in our Naive Bayes. 
 
-## EDA
+Since we are using a greedy method of forward selection for variable selection, potential future work could continue trying the different combinations of predictors to get the global optimal model for prediction. 
+
+## EDA {#eda}
 
 ```{r eda}
 
 num_c <- Customer_telecom %>%
-  dplyr::select(account.length, number.vmail.messages, total.day.minutes, total.day.calls, total.day.charge, total.eve.minutes, total.eve.calls, total.eve.charge, total.night.minutes, total.night.calls, total.night.charge, total.intl.minutes, total.intl.calls, total.intl.charge, customer.service.calls)
+  dplyr::select(
+    account.length,
+    number.vmail.messages,
+    total.day.minutes,
+    total.day.calls,
+    total.day.charge,
+    total.eve.minutes,
+    total.eve.calls,
+    total.eve.charge,
+    total.night.minutes,
+    total.night.calls,
+    total.night.charge,
+    total.intl.minutes,
+    total.intl.calls,
+    total.intl.charge,
+    customer.service.calls
+  )
 
 cor(num_c)
 summary(Customer_telecom)
 
 num_c <- num_c %>%
-  dplyr::select(account.length, number.vmail.messages, total.day.minutes, total.day.calls, total.eve.minutes, total.eve.calls, total.night.minutes, total.night.calls, total.intl.minutes, total.intl.calls, customer.service.calls)
+  dplyr::select(
+    account.length,
+    number.vmail.messages,
+    total.day.minutes,
+    total.day.calls,
+    total.eve.minutes,
+    total.eve.calls,
+    total.night.minutes,
+    total.night.calls,
+    total.intl.minutes,
+    total.intl.calls,
+    customer.service.calls
+  )
 
 minutes_c <- num_c %>%
-  dplyr::select(account.length, number.vmail.messages, total.day.minutes, total.eve.minutes, total.night.minutes, total.intl.minutes, customer.service.calls)
+  dplyr::select(
+    account.length,
+    number.vmail.messages,
+    total.day.minutes,
+    total.eve.minutes,
+    total.night.minutes,
+    total.intl.minutes,
+    customer.service.calls
+  )
 
 pairs(minutes_c)
 
 calls_c <-  Customer_telecom %>%
-  dplyr::select(account.length, number.vmail.messages, total.day.calls, total.eve.calls, total.night.calls, total.intl.calls, customer.service.calls)
+  dplyr::select(
+    account.length,
+    number.vmail.messages,
+    total.day.calls,
+    total.eve.calls,
+    total.night.calls,
+    total.intl.calls,
+    customer.service.calls
+  )
 pairs(calls_c)
 
 sums_c <- Customer_telecom %>%
-  mutate(total_minutes = sum(total.day.minutes, total.eve.minutes, total.night.minutes, total.intl.minutes)) %>%
-  mutate(total_calls = sum(total.day.calls, total.eve.calls, total.night.calls, total.intl.calls)) %>%
-  dplyr::select(account.length, number.vmail.messages, total_minutes, total_calls,  customer.service.calls)
-                             
+  mutate(
+    total_minutes = sum(
+      total.day.minutes,
+      total.eve.minutes,
+      total.night.minutes,
+      total.intl.minutes
+    )
+  ) %>%
+  mutate(
+    total_calls = sum(
+      total.day.calls,
+      total.eve.calls,
+      total.night.calls,
+      total.intl.calls
+    )
+  ) %>%
+  dplyr::select(
+    account.length,
+    number.vmail.messages,
+    total_minutes,
+    total_calls,
+    customer.service.calls
+  )
+
 pairs(sums_c)
 
 Customer_telecom <- Customer_telecom %>%
   mutate(churn1 = if_else(churn == "False", 0, 1))
 
-glm.fits <- glm(
-  churn1 ~ total.day.minutes,
-  data = Customer_telecom, family = binomial
-)
+glm.fits <- glm(churn1 ~ total.day.minutes,
+                data = Customer_telecom, family = binomial)
 summary(glm.fits)
 
 glm.fits1 <- glm(
-  churn1 ~ account.length+ number.vmail.messages+ total.day.minutes+total.day.calls+ total.day.charge+ total.eve.minutes+ total.eve.calls+total.eve.charge+ total.night.minutes+total.night.calls+ total.night.charge+ total.intl.minutes+total.intl.calls+total.intl.charge+ customer.service.calls,
-  data = Customer_telecom, family = binomial
+  churn1 ~ account.length + 
+    number.vmail.messages + 
+    total.day.minutes + 
+    total.day.calls + 
+    total.day.charge + 
+    total.eve.minutes + 
+    total.eve.calls +
+    total.eve.charge + 
+    total.night.minutes + 
+    total.night.calls + 
+    total.night.charge + 
+    total.intl.minutes +
+    total.intl.calls + 
+    total.intl.charge + 
+    customer.service.calls,
+  data = Customer_telecom,
+  family = binomial
 )
 summary(glm.fits1)
 ```
-Based on the result from our preprocess, the output from cor() shows all correlations between two variables, the two variables with high correlation will not be in the same model. The LRM glm.fits1 including all predictors provides a summary of z-Score and p-value. We will start fitting models with the predictors number.vmail.messages(p=4.89e-08), total.intl.calls(p=0.00077), and customer.service.calls(p=< 2e-16).
+Based on the result from our preprocess, the output from cor() shows all correlations between two variables. The two variables with high correlation will not be in the same model. The LRM glm.fits1 including all predictors provides a summary of z-Score and p-value. We will start fitting models with the predictors number.vmail.messages(p=4.89e-08), total.intl.calls(p=0.00077), and customer.service.calls(p<=2e-16).
 
+\newpage
 ## Models
 
-##LDA
-```{r lda}
-library(MASS)
-library(caret)
-library(pROC)
+## LDA {#lda1}
 
+```{r lda1}
 
 #Randomly shuffle the data
-Customer_telecom<-Customer_telecom[sample(nrow(Customer_telecom)),]
+Customer_telecom <- Customer_telecom[sample(nrow(Customer_telecom)), ]
 
 #Create 10 equally size folds
-folds <- cut(seq(1,nrow(Customer_telecom)),breaks=10,labels=FALSE)
+folds <- cut(seq(1, nrow(Customer_telecom)), breaks = 10, labels = FALSE)
 
-totalMisclassificationRate=c()
-runningTotal=c()
+totalMisclassificationRate = c()
+runningTotal = c()
 
 averageAUC = c()
 auc = c()
 
 #K-fold Cross Validation
-for (i in 1:10){
-  testIndexes <- which(folds==i,arr.ind=TRUE)
-  test_data <- Customer_telecom[testIndexes, ]
-  train_data <- Customer_telecom[-testIndexes, ]
-  m_lda <- lda(churn1 ~ number.vmail.messages + total.intl.calls + customer.service.calls, data = train_data)
+for (i in 1:10) {
+  testIndexes <- which(folds == i, arr.ind = TRUE)
+  test_data <- Customer_telecom[testIndexes,]
+  train_data <- Customer_telecom[-testIndexes,]
+  m_lda <-
+    lda(churn1 ~ number.vmail.messages + total.intl.calls + customer.service.calls,
+        data = train_data)
   m_pred <- predict(m_lda, test_data)
-  conf <- table(list(predicted=m_pred$class, observed=test_data$churn1))
+  conf <-
+    table(list(predicted = m_pred$class, observed = test_data$churn1))
   confusionMatrix(conf)
   print(conf)
   totalPreds = sum(conf)
-  incorrectPreds <- conf[1,2] + conf[2,1]
+  incorrectPreds <- conf[1, 2] + conf[2, 1]
   misclassificationRate <- incorrectPreds / totalPreds
   print(misclassificationRate)
   runningTotal <- c(runningTotal, misclassificationRate)
   
-  roc_score = roc(response = test_data$churn1, predictor = m_pred$posterior[,"1"])
-  auc <- c(auc,roc_score$auc)
+  roc_score = roc(response = test_data$churn1,
+                  predictor = m_pred$posterior[, "1"])
+  auc <- c(auc, roc_score$auc)
   print(roc_score$auc)
-  plot(roc_score, main="ROC Curve - LDA: Iteration ")
+  plot(roc_score, main = "ROC Curve - LDA: Iteration ")
 }
 
-totalMisclassificationRate=c(totalMisclassificationRate, mean(runningTotal))
+totalMisclassificationRate = c(totalMisclassificationRate, mean(runningTotal))
 print("Average Misclassification Rate")
 totalMisclassificationRate
 
 print("Average AUC")
-averageAUC=c(averageAUC, mean(auc))
+averageAUC = c(averageAUC, mean(auc))
 print(averageAUC)
 ```
 
-##QDA
+\newpage
+## QDA {#qda}
+
 ```{r qda}
-library(MASS)
 
 #Randomly shuffle the data
-Customer_telecom<-Customer_telecom[sample(nrow(Customer_telecom)),]
+Customer_telecom <- Customer_telecom[sample(nrow(Customer_telecom)), ]
 
 #Create 10 equally size folds
-folds <- cut(seq(1,nrow(Customer_telecom)),breaks=10,labels=FALSE)
+folds <- cut(seq(1, nrow(Customer_telecom)), breaks = 10, labels = FALSE)
 
 totalMisclassificationRate <- c()
 runningTotal <- c()
@@ -146,48 +234,54 @@ runningTotal <- c()
 averageAUC = c()
 auc = c()
 
-for (i in 1:10){
-  testIndexes <- which(folds==i,arr.ind=TRUE)
-  test_data <- Customer_telecom[testIndexes, ]
-  train_data <- Customer_telecom[-testIndexes, ]
-  m_qda <- qda(churn1 ~ number.vmail.messages + total.intl.calls + customer.service.calls, data = train_data)
+for (i in 1:10) {
+  testIndexes <- which(folds == i, arr.ind = TRUE)
+  test_data <- Customer_telecom[testIndexes,]
+  train_data <- Customer_telecom[-testIndexes,]
+  m_qda <-
+    qda(churn1 ~ number.vmail.messages + 
+          total.intl.calls + 
+          customer.service.calls,
+        data = train_data)
   m_pred <- predict(m_qda, test_data)
-  conf <- table(list(predicted=m_pred$class, observed=test_data$churn1))
+  conf <-
+    table(list(predicted = m_pred$class, observed = test_data$churn1))
   confusionMatrix(conf)
   print(conf)
   totalPreds = sum(conf)
-  incorrectPreds <- conf[1,2] + conf[2,1]
+  incorrectPreds <- conf[1, 2] + conf[2, 1]
   misclassificationRate <- incorrectPreds / totalPreds
   print(misclassificationRate)
   runningTotal <- c(runningTotal, misclassificationRate)
   
-  roc_score = roc(response = test_data$churn1, predictor = m_pred$posterior[,"1"])
-  auc <- c(auc,roc_score$auc)
+  roc_score = roc(response = test_data$churn1,
+                  predictor = m_pred$posterior[, "1"])
+  auc <- c(auc, roc_score$auc)
   print(roc_score$auc)
-  plot(roc_score, main="ROC Curve - LDA: Iteration ")
+  plot(roc_score, main = "ROC Curve - LDA: Iteration ")
 }
 
-totalMisclassificationRate=c(totalMisclassificationRate, mean(runningTotal))
+totalMisclassificationRate = c(totalMisclassificationRate, mean(runningTotal))
 print("Average Misclassification Rate")
 totalMisclassificationRate
 
 print("Average AUC")
-averageAUC=c(averageAUC, mean(auc))
+averageAUC = c(averageAUC, mean(auc))
 print(averageAUC)
 ```
 
-
-##Naive Bayes
+\newpage
+## Naive Bayes {#nbayes}
 
 ```{r naive}
-library(MASS)
-library(e1071)
 
 #Randomly shuffle the data
-Customer_telecom<-Customer_telecom[sample(nrow(Customer_telecom)),]
+Customer_telecom <-
+  Customer_telecom[sample(nrow(Customer_telecom)),]
 
 #Create 10 equally size folds
-folds <- cut(seq(1,nrow(Customer_telecom)),breaks=10,labels=FALSE)
+folds <-
+  cut(seq(1, nrow(Customer_telecom)), breaks = 10, labels = FALSE)
 
 totalMisclassificationRate <- c()
 runningTotal <- c()
@@ -195,18 +289,21 @@ runningTotal <- c()
 averageAUC = c()
 auc = c()
 
-for (i in 1:10){
-  testIndexes <- which(folds==i,arr.ind=TRUE)
+for (i in 1:10) {
+  testIndexes <- which(folds == i, arr.ind = TRUE)
   test_data <- Customer_telecom[testIndexes, ]
   train_data <- Customer_telecom[-testIndexes, ]
-  m_naive <- naiveBayes(churn1 ~ number.vmail.messages + total.intl.calls + customer.service.calls, data = train_data)
+  m_naive <-
+    naiveBayes(churn1 ~ number.vmail.messages + total.intl.calls + customer.service.calls,
+               data = train_data)
   m_pred <- predict(m_naive, test_data)
   
-  conf <- table(list(predicted=m_pred, observed=test_data$churn1))
+  conf <-
+    table(list(predicted = m_pred, observed = test_data$churn1))
   confusionMatrix(conf)
   print(conf)
   totalPreds = sum(conf)
-  incorrectPreds <- conf[1,2] + conf[2,1]
+  incorrectPreds <- conf[1, 2] + conf[2, 1]
   misclassificationRate <- incorrectPreds / totalPreds
   print(misclassificationRate)
   runningTotal <- c(runningTotal, misclassificationRate)
@@ -217,7 +314,7 @@ for (i in 1:10){
   #plot(roc_score, main="ROC Curve - LDA: Iteration ")
 }
 
-totalMisclassificationRate=c(totalMisclassificationRate, mean(runningTotal))
+totalMisclassificationRate = c(totalMisclassificationRate, mean(runningTotal))
 print("Average Misclassification Rate")
 totalMisclassificationRate
 
@@ -226,157 +323,192 @@ totalMisclassificationRate
 #print(averageAUC)
 ```
 
-##LDA Experiments
+\newpage
 
-##LDA with next most significant predictor
+##Experiments
 
-```{r lda}
-library(MASS)
-library(caret)
+## LDA with next most significant predictor {#lda2}
 
+```{r lda2}
 
 #Randomly shuffle the data
-Customer_telecom<-Customer_telecom[sample(nrow(Customer_telecom)),]
+Customer_telecom <-
+  Customer_telecom[sample(nrow(Customer_telecom)),]
 
 #Create 10 equally size folds
-folds <- cut(seq(1,nrow(Customer_telecom)),breaks=10,labels=FALSE)
+folds <-
+  cut(seq(1, nrow(Customer_telecom)), breaks = 10, labels = FALSE)
 
-totalMisclassificationRate=c()
-runningTotal=c()
+totalMisclassificationRate = c()
+runningTotal = c()
 
 averageAUC = c()
 auc = c()
 
 #K-fold Cross Validation
-for (i in 1:10){
-  testIndexes <- which(folds==i,arr.ind=TRUE)
-  test_data <- Customer_telecom[testIndexes, ]
-  train_data <- Customer_telecom[-testIndexes, ]
-  m_lda2 <- lda(churn1 ~ number.vmail.messages + total.intl.calls + customer.service.calls + total.day.calls, data = train_data)
+for (i in 1:10) {
+  testIndexes <- which(folds == i, arr.ind = TRUE)
+  test_data <- Customer_telecom[testIndexes,]
+  train_data <- Customer_telecom[-testIndexes,]
+  m_lda2 <-
+    lda(
+      churn1 ~ number.vmail.messages + 
+        total.intl.calls + 
+        customer.service.calls + 
+        total.day.calls,
+      data = train_data
+    )
   m_pred <- predict(m_lda2, test_data)
-  conf <- table(list(predicted=m_pred$class, observed=test_data$churn1))
+  conf <-
+    table(list(predicted = m_pred$class, observed = test_data$churn1))
   confusionMatrix(conf)
   print(conf)
   totalPreds = sum(conf)
-  incorrectPreds <- conf[1,2] + conf[2,1]
+  incorrectPreds <- conf[1, 2] + conf[2, 1]
   misclassificationRate <- incorrectPreds / totalPreds
   print(misclassificationRate)
   runningTotal <- c(runningTotal, misclassificationRate)
   
-  roc_score = roc(response = test_data$churn1, predictor = m_pred$posterior[,"1"])
-  auc <- c(auc,roc_score$auc)
+  roc_score = roc(response = test_data$churn1,
+                  predictor = m_pred$posterior[, "1"])
+  auc <- c(auc, roc_score$auc)
   print(roc_score$auc)
-  plot(roc_score, main="ROC Curve - LDA: Iteration ")
+  plot(roc_score, main = "ROC Curve - LDA: Iteration ")
 }
 
-totalMisclassificationRate=c(totalMisclassificationRate, mean(runningTotal))
+totalMisclassificationRate = c(totalMisclassificationRate, mean(runningTotal))
 print("Average Misclassification Rate")
 totalMisclassificationRate
 
 print("Average AUC")
-averageAUC=c(averageAUC, mean(auc))
+averageAUC = c(averageAUC, mean(auc))
 print(averageAUC)
 ```
 
-By adding one more predictor total.day.calls(the potential predictor with the fourth smallest p-value from LRM), the average misclassification rate tend to increase slightly, which may be caused by overfitting. --So we stop by including 3 predictors in our model. 
+By adding one more predictor total.day.calls (the potential predictor with the fourth smallest p-value from LRM), the average misclassification rate tend to increase slightly, which may be caused by overfitting - so we stop by including only the original 3 predictors in our model. 
 
-##LDA All potentially relevant predictors
-```{r lda}
-library(MASS)
-library(caret)
+\newpage
+## LDA All potentially relevant predictors {#lda3}
 
+```{r lda3}
 
 #Randomly shuffle the data
-Customer_telecom<-Customer_telecom[sample(nrow(Customer_telecom)),]
+Customer_telecom <-
+  Customer_telecom[sample(nrow(Customer_telecom)),]
 
 #Create 10 equally size folds
-folds <- cut(seq(1,nrow(Customer_telecom)),breaks=10,labels=FALSE)
+folds <-
+  cut(seq(1, nrow(Customer_telecom)), breaks = 10, labels = FALSE)
 
-totalMisclassificationRate=c()
-runningTotal=c()
+totalMisclassificationRate = c()
+runningTotal = c()
 
 averageAUC = c()
 auc = c()
 
 #K-fold Cross Validation
-for (i in 1:10){
-  testIndexes <- which(folds==i,arr.ind=TRUE)
+for (i in 1:10) {
+  testIndexes <- which(folds == i, arr.ind = TRUE)
   test_data <- Customer_telecom[testIndexes, ]
   train_data <- Customer_telecom[-testIndexes, ]
-  m_lda2 <- lda(churn1 ~ state + account.length + international.plan + voice.mail.plan + number.vmail.messages + total.day.minutes + total.eve.minutes + total.night.minutes + total.intl.minutes + customer.service.calls, data = train_data)
+  m_lda2 <-
+    lda(
+      churn1 ~ state + 
+        account.length + 
+        international.plan + 
+        voice.mail.plan + 
+        number.vmail.messages + 
+        total.day.minutes + 
+        total.eve.minutes + 
+        total.night.minutes + 
+        total.intl.minutes + 
+        customer.service.calls,
+      data = train_data
+    )
   m_pred <- predict(m_lda2, test_data)
-  conf <- table(list(predicted=m_pred$class, observed=test_data$churn1))
+  conf <-
+    table(list(predicted = m_pred$class, observed = test_data$churn1))
   confusionMatrix(conf)
   print(conf)
   totalPreds = sum(conf)
-  incorrectPreds <- conf[1,2] + conf[2,1]
+  incorrectPreds <- conf[1, 2] + conf[2, 1]
   misclassificationRate <- incorrectPreds / totalPreds
   print(misclassificationRate)
   runningTotal <- c(runningTotal, misclassificationRate)
   
-  roc_score = roc(response = test_data$churn1, predictor = m_pred$posterior[,"1"])
-  auc <- c(auc,roc_score$auc)
+  roc_score = roc(response = test_data$churn1,
+                  predictor = m_pred$posterior[, "1"])
+  auc <- c(auc, roc_score$auc)
   print(roc_score$auc)
-  plot(roc_score, main="ROC Curve - LDA: Iteration ")
+  plot(roc_score, main = "ROC Curve - LDA: Iteration ")
 }
 
-totalMisclassificationRate=c(totalMisclassificationRate, mean(runningTotal))
+totalMisclassificationRate = c(totalMisclassificationRate, mean(runningTotal))
 print("Average Misclassification Rate")
 totalMisclassificationRate
 
 print("Average AUC")
-averageAUC=c(averageAUC, mean(auc))
+averageAUC = c(averageAUC, mean(auc))
 print(averageAUC)
 ```
 
-Using all predictors except those that would not be meaningful (such as phone number), we get an average misclassification rate that is higher than our selected predictors, this is likely an indicator that the model is capturing unimportant observations.
+Using all predictors except those that would not be meaningful (such as phone number), we get an average misclassification rate that is higher than our selected predictors. This is likely an indicator that the model is capturing unimportant observations.
 
-##LDA All call metrics
-```{r lda}
-library(MASS)
-library(caret)
+\newpage
+## LDA All call metrics {#lda4}
 
+```{r lda4}
 
 #Randomly shuffle the data
-Customer_telecom<-Customer_telecom[sample(nrow(Customer_telecom)),]
+Customer_telecom <- Customer_telecom[sample(nrow(Customer_telecom)), ]
 
 #Create 10 equally size folds
-folds <- cut(seq(1,nrow(Customer_telecom)),breaks=10,labels=FALSE)
+folds <- cut(seq(1, nrow(Customer_telecom)), breaks = 10, labels = FALSE)
 
-totalMisclassificationRate=c()
-runningTotal=c()
+totalMisclassificationRate = c()
+runningTotal = c()
 
 averageAUC = c()
 auc = c()
 
 #K-fold Cross Validation
-for (i in 1:10){
-  testIndexes <- which(folds==i,arr.ind=TRUE)
-  test_data <- Customer_telecom[testIndexes, ]
-  train_data <- Customer_telecom[-testIndexes, ]
-  m_lda2 <- lda(churn1 ~ number.vmail.messages + total.intl.calls + customer.service.calls + total.day.calls + total.night.calls, data = train_data)
+for (i in 1:10) {
+  testIndexes <- which(folds == i, arr.ind = TRUE)
+  test_data <- Customer_telecom[testIndexes,]
+  train_data <- Customer_telecom[-testIndexes,]
+  m_lda2 <-
+    lda(
+      churn1 ~ number.vmail.messages + 
+        total.intl.calls + 
+        customer.service.calls + 
+        total.day.calls + 
+        total.night.calls,
+      data = train_data
+    )
   m_pred <- predict(m_lda2, test_data)
-  conf <- table(list(predicted=m_pred$class, observed=test_data$churn1))
+  conf <-
+    table(list(predicted = m_pred$class, observed = test_data$churn1))
   confusionMatrix(conf)
   print(conf)
   totalPreds = sum(conf)
-  incorrectPreds <- conf[1,2] + conf[2,1]
+  incorrectPreds <- conf[1, 2] + conf[2, 1]
   misclassificationRate <- incorrectPreds / totalPreds
   print(misclassificationRate)
   runningTotal <- c(runningTotal, misclassificationRate)
   
-  roc_score = roc(response = test_data$churn1, predictor = m_pred$posterior[,"1"])
-  auc <- c(auc,roc_score$auc)
+  roc_score = roc(response = test_data$churn1,
+                  predictor = m_pred$posterior[, "1"])
+  auc <- c(auc, roc_score$auc)
   print(roc_score$auc)
-  plot(roc_score, main="ROC Curve - LDA: Iteration ")
+  plot(roc_score, main = "ROC Curve - LDA: Iteration ")
 }
 
-totalMisclassificationRate=c(totalMisclassificationRate, mean(runningTotal))
+totalMisclassificationRate = c(totalMisclassificationRate, mean(runningTotal))
 print("Average Misclassification Rate")
 totalMisclassificationRate
 
 print("Average AUC")
-averageAUC=c(averageAUC, mean(auc))
+averageAUC = c(averageAUC, mean(auc))
 print(averageAUC)
 ```
 
